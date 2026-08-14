@@ -27,15 +27,15 @@ The **Mahindra & Swaraj AI Voice Service Concierge** is a real-time, full-duplex
 ```mermaid
 flowchart TD
     subgraph Ingress["Customer Ingress Channels"]
-        Phone["📱 Customer Phone (PSTN)"] -- 8kHz G.711u --o Twilio["Twilio Voice Media Stream (WSS)"]
-        Browser["💻 Mission Control UI (WebRTC)"] -- 16/24kHz PCM --o WebAudio["Browser AudioWorklet (WSS)"]
+        Phone["📱 Customer Phone (PSTN)"] -->|"8kHz G.711u"| Twilio["Twilio Voice Media Stream (WSS)"]
+        Browser["💻 Mission Control UI (WebRTC)"] -->|"16/24kHz PCM"| WebAudio["Browser AudioWorklet (WSS)"]
     end
 
     subgraph CoreBridge["FastAPI Full-Duplex Audio Engine (Cloud Run)"]
-        AudioBridge["AudioBridgeSession\n(/ws/twilio/stream & /ws/browser/audio)"]
-        Transcoder["Audio Transcoder\n(8kHz G.711u <--> 16/24kHz PCM16)"]
-        VAD["Streaming VAD & Energy Tracker\n(Sub-40ms Interruption Detection)"]
-        BargeIn["Barge-in Buffer Flusher\n(Sends Twilio 'clear' event)"]
+        AudioBridge["AudioBridgeSession<br/>(/ws/twilio/stream & /ws/browser/audio)"]
+        Transcoder["Audio Transcoder<br/>(8kHz G.711u ↔ 16/24kHz PCM16)"]
+        VAD["Streaming VAD & Energy Tracker<br/>(Sub-40ms Interruption Detection)"]
+        BargeIn["Barge-in Buffer Flusher<br/>(Sends Twilio clear event)"]
         
         AudioBridge <--> Transcoder
         AudioBridge --> VAD
@@ -43,31 +43,31 @@ flowchart TD
     end
 
     subgraph AIPlatform["Google Cloud Vertex AI"]
-        GeminiLive["Gemini 2.5 Live Multimodal API\n(gemini-live-2.5-flash-native-audio)"]
-        AuthADC["OAuth2 Bearer Token / ADC\n(roles/aiplatform.user)"]
+        GeminiLive["Gemini 2.5 Live Multimodal API<br/>(gemini-live-2.5-flash-native-audio)"]
+        AuthADC["OAuth2 Bearer Token / ADC<br/>(roles/aiplatform.user)"]
         
         AuthADC -.-> GeminiLive
-        AudioBridge <== Bidirectional PCM16 WSS ==> GeminiLive
+        AudioBridge <==>|"Bidirectional PCM16 WSS"| GeminiLive
     end
 
     subgraph BusinessLogic["Domain Tools & DMS Database"]
-        ToolsHandler["Agent Tools Handler\n(9 Domain Function Tools)"]
+        ToolsHandler["Agent Tools Handler<br/>(9 Domain Function Tools)"]
         DMSService["DMS & Bay Scheduling Service"]
-        DB[(PostgreSQL / SQLite Database\nDealerships | Customers | Slots | Catalog)]
+        DB[("PostgreSQL / SQLite Database<br/>(Dealerships, Customers, Slots, Catalog)")]
         Notification["SMS / WhatsApp Service"]
         
-        GeminiLive -- Tool Call / Response --> ToolsHandler
+        GeminiLive -->|"Tool Call / Response"| ToolsHandler
         ToolsHandler --> DMSService
         DMSService <--> DB
         DMSService --> Notification
     end
 
     subgraph Observability["Live Telemetry & Management"]
-        TelemetryWS["Telemetry WebSocket (/ws/telemetry)"]
-        UIConsole["Mission Control UI\n(Waveform | Transcripts | Bay Grid | Call History)"]
+        TelemetryWS["Telemetry WebSocket<br/>(/ws/telemetry)"]
+        UIConsole["Mission Control UI<br/>(Waveform, Transcripts, Bay Grid, Call History)"]
         
-        AudioBridge -. Live State Events .-> TelemetryWS
-        TelemetryWS -. Broadcast .-> UIConsole
+        AudioBridge -.->|"Live State Events"| TelemetryWS
+        TelemetryWS -.->|"Broadcast"| UIConsole
     end
 ```
 
