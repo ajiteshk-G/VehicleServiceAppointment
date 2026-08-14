@@ -1,0 +1,1557 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mahindra & Swaraj AI Voice Concierge | Mission Control</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Inter & JetBrains Mono Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            mahindra: {
+              red: '#e31837',
+              dark: '#0f172a',
+              card: '#1e293b',
+              accent: '#f43f5e'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0b0f19; }
+    ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #334155; }
+    @keyframes pulse-slow { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.6; transform: scale(1.05); } }
+    .animate-pulse-slow { animation: pulse-slow 2s infinite ease-in-out; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-rose-500 selection:text-white">
+
+  <!-- TOP APP HEADER -->
+  <header class="h-16 border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-30">
+    <div class="flex items-center gap-3.5">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-rose-700 via-rose-600 to-rose-500 flex items-center justify-center shadow-lg shadow-rose-900/40 text-white font-black text-lg">
+        M
+      </div>
+      <div>
+        <div class="flex items-center gap-2.5">
+          <h1 class="font-bold text-sm tracking-tight text-white flex items-center gap-1.5">
+            Mahindra & Swaraj AI Voice Concierge
+          </h1>
+          <span class="text-[10px] px-2 py-0.5 rounded-full bg-rose-950/80 text-rose-300 border border-rose-800/60 font-mono font-semibold">
+            Gemini 2.5 Live + Twilio PSTN
+          </span>
+          <span class="text-[10px] px-2 py-0.5 rounded-full bg-indigo-950/80 text-indigo-300 border border-indigo-800/60 font-mono font-medium">
+            Cloud Run Native
+          </span>
+        </div>
+        <p class="text-[11px] text-slate-400">
+          Real-time Indic Automotive Outbound Service Reminder & Workshop Bay Concierge
+        </p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-4">
+      <div id="liveClockBadge" class="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-xs font-mono text-amber-400">
+        <span>🕒</span>
+        <span id="liveClockText">--:--:-- IST</span>
+      </div>
+      <div id="wsStatusBadge" class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-xs font-mono text-slate-400">
+        <span id="wsStatusDot" class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+        <span id="wsStatusText">Connecting...</span>
+      </div>
+      <button onclick="openTwilioDialerModal()" class="px-3.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-semibold text-white flex items-center gap-2 transition">
+        <span>📞</span> PSTN Phone Call
+      </button>
+    </div>
+  </header>
+
+  <!-- TAB NAVIGATION BAR -->
+  <div class="bg-slate-950/90 border-b border-slate-800 px-6 flex items-center justify-between">
+    <div class="flex items-center gap-1">
+      <button id="tabBtnConsole" onclick="switchViewTab('console')" class="py-3 px-4 border-b-2 border-rose-500 text-rose-400 font-semibold text-xs flex items-center gap-2 transition">
+        <span>🎙️</span> Live Concierge Console
+      </button>
+      <button id="tabBtnCallLogs" onclick="switchViewTab('call_logs')" class="py-3 px-4 border-b-2 border-transparent text-slate-400 hover:text-slate-200 font-semibold text-xs flex items-center gap-2 transition">
+        <span>📋</span> Call History & Transcripts
+        <span id="callLogsBadgeCount" class="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-mono">0</span>
+      </button>
+    </div>
+    <div class="text-xs text-slate-500 font-mono hidden md:flex items-center gap-3">
+      <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Timezone: Asia/Kolkata (IST)</span>
+    </div>
+  </div>
+
+  <!-- VIEW 1: LIVE CONSOLE WORKSPACE -->
+  <div id="viewConsole" class="flex-1 flex flex-col overflow-hidden">
+    <!-- CUSTOMER & VEHICLE PROFILE BAR -->
+    <div class="bg-slate-900/70 border-b border-slate-800 px-6 py-3 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-4 flex-1 min-w-[300px]">
+        <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 flex-shrink-0">
+          <span>🚗</span> Target Customer:
+        </label>
+        <select id="customerSelect" onchange="onCustomerChange(this.value)" class="bg-slate-950 border border-slate-700 text-xs text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-rose-500 focus:outline-none flex-1 max-w-md font-medium">
+          <option value="">Loading from database...</option>
+        </select>
+      </div>
+
+      <div class="flex items-center gap-6 text-xs font-mono text-slate-300 flex-wrap">
+        <div>
+          <span class="text-slate-500">Model:</span>
+          <span id="barVehicleModel" class="font-bold text-white ml-1">--</span>
+        </div>
+        <div>
+          <span class="text-slate-500">Reg No:</span>
+          <span id="barRegNumber" class="font-bold text-rose-400 ml-1">--</span>
+        </div>
+        <div>
+          <span class="text-slate-500">Odometer:</span>
+          <span id="barOdometer" class="font-bold text-white ml-1">--</span>
+        </div>
+        <div>
+          <span class="text-slate-500">Service Due:</span>
+          <span id="barServiceDue" class="font-bold text-amber-400 ml-1">--</span>
+        </div>
+        <div>
+          <span class="text-slate-500">Assigned Dealer:</span>
+          <span id="barDealerName" class="font-bold text-emerald-400 ml-1">--</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAIN 3-COLUMN DASHBOARD GRID -->
+    <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-5 p-6 overflow-hidden">
+
+      <!-- COLUMN 1: LIVE VOICE & CONVERSATION -->
+      <section class="lg:col-span-4 flex flex-col bg-slate-900/60 rounded-2xl border border-slate-800/80 overflow-hidden shadow-xl">
+        <div class="px-5 py-3.5 border-b border-slate-800 flex items-center justify-between bg-slate-900/90">
+          <div class="flex items-center gap-2">
+            <span class="text-rose-400">🎙️</span>
+            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-200">Live Voice Stream</h2>
+          </div>
+          <span id="callStateBadge" class="text-[11px] font-mono px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">
+            IDLE
+          </span>
+        </div>
+
+        <div class="p-5 border-b border-slate-800/80 bg-slate-950/40 flex flex-col gap-4">
+          <div class="relative w-full h-24 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center overflow-hidden">
+            <canvas id="waveformCanvas" width="400" height="96" class="w-full h-full"></canvas>
+            <div id="waveformOverlay" class="absolute inset-0 flex items-center justify-center pointer-events-none text-slate-600 font-mono text-xs">
+              Microphone Standby
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <button id="btnBrowserCall" onclick="toggleBrowserCall()" class="py-2.5 px-4 rounded-xl bg-gradient-to-r from-rose-600 to-rose-500 hover:from-rose-500 hover:to-rose-400 text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-lg shadow-rose-900/30 transition transform active:scale-95">
+              <span id="btnBrowserCallIcon">🎙️</span>
+              <span id="btnBrowserCallText">Start Browser Call</span>
+            </button>
+            <button onclick="openTwilioDialerModal()" class="py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs border border-slate-700 flex items-center justify-center gap-2 transition transform active:scale-95">
+              <span>📞</span> Dial PSTN Phone
+            </button>
+          </div>
+
+          <div class="flex items-center justify-between text-[11px] text-slate-500 font-mono pt-1">
+            <span>Sampling: 16kHz PCM (Mic) / 24kHz (AI)</span>
+            <span id="bargeInBadge" class="hidden text-amber-400 font-semibold flex items-center gap-1">
+              ⚡ BARGE-IN ACTIVE
+            </span>
+          </div>
+        </div>
+
+        <div class="flex-1 flex flex-col min-h-[260px] max-h-[380px] p-4 overflow-y-auto gap-3" id="transcriptContainer">
+          <div class="flex items-center justify-center h-full text-slate-600 text-xs italic">
+            Conversation transcript will appear here in real-time...
+          </div>
+        </div>
+
+        <!-- Quick Interactive Speech Chips (Hindi / Hinglish / English) -->
+        <div class="px-3 py-2 bg-slate-950/80 border-t border-slate-800/80 flex flex-wrap gap-1.5 items-center">
+          <span class="text-[10px] text-slate-500 font-mono">Test Utterances:</span>
+          <button onclick="sendUserSpeech('हाँ बताइए')" class="text-[11px] px-2 py-0.5 bg-orange-950 hover:bg-orange-900 text-orange-200 rounded border border-orange-800 transition">🇮🇳 "हाँ बताइए"</button>
+          <button onclick="sendUserSpeech('कितना खर्चा आएगा?')" class="text-[11px] px-2 py-0.5 bg-orange-950 hover:bg-orange-900 text-orange-200 rounded border border-orange-800 transition">🇮🇳 "कितना खर्चा आएगा?"</button>
+          <button onclick="sendUserSpeech('शनिवार सुबह 10 बजे बुक कर दो')" class="text-[11px] px-2 py-0.5 bg-orange-950 hover:bg-orange-900 text-orange-200 rounded border border-orange-800 transition">🇮🇳 "शनिवार बुक कर दो"</button>
+          <button onclick="sendUserSpeech('Cost kitna hoga?')" class="text-[11px] px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700 transition">🔤 "Cost kitna hoga?"</button>
+          <button onclick="sendUserSpeech('What is the estimated service cost?')" class="text-[11px] px-2 py-0.5 bg-sky-950 hover:bg-sky-900 text-sky-200 rounded border border-sky-800 transition">🇬🇧 "Estimated cost?"</button>
+          <button onclick="sendUserSpeech('Please book Saturday 10 AM for me')" class="text-[11px] px-2 py-0.5 bg-sky-950 hover:bg-sky-900 text-sky-200 rounded border border-sky-800 transition">🇬🇧 "Book Saturday 10 AM"</button>
+          <button onclick="sendUserSpeech('Haan, confirm kar do')" class="text-[11px] px-2 py-0.5 bg-emerald-950 hover:bg-emerald-900 text-emerald-300 rounded border border-emerald-800 transition">✅ "Confirm kardo"</button>
+          <button onclick="sendUserSpeech('Please call me tomorrow at 4 PM')" class="text-[11px] px-2 py-0.5 bg-amber-950 hover:bg-amber-900 text-amber-300 rounded border border-amber-800 transition">⏰ "Call tomorrow 4 PM"</button>
+        </div>
+
+        <div class="p-3 border-t border-slate-800/80 bg-slate-950/60 flex items-center justify-between text-[11px] text-slate-500 font-mono">
+          <span id="transcriptCount">0 messages</span>
+          <button onclick="clearTranscript()" class="hover:text-rose-400 transition">Clear Log</button>
+        </div>
+      </section>
+
+      <!-- COLUMN 2: AI REASONING & TOOL EXECUTION FEED -->
+      <section class="lg:col-span-4 flex flex-col bg-slate-900/60 rounded-2xl border border-slate-800/80 overflow-hidden shadow-xl">
+        <div class="px-5 py-3.5 border-b border-slate-800 flex items-center justify-between bg-slate-900/90">
+          <div class="flex items-center gap-2">
+            <span class="text-indigo-400">⚡</span>
+            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-200">AI Reasoning & Tool Feed</h2>
+          </div>
+          <div class="flex items-center gap-1.5 font-mono text-[11px] text-slate-400">
+            <span>Fired:</span>
+            <span id="statToolsFired" class="text-indigo-400 font-bold">0</span>
+          </div>
+        </div>
+
+        <div class="flex-1 p-4 overflow-y-auto flex flex-col gap-3" id="toolFeedContainer">
+          <div class="flex flex-col items-center justify-center h-full text-center text-slate-600 text-xs gap-2 p-6">
+            <span class="text-2xl">🔧</span>
+            <span>Autonomous reasoning and DMS tool executions will appear here in real-time.</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- COLUMN 3: DMS WORKSHOP OCCUPANCY & CAMPAIGN SCHEDULER -->
+      <section class="lg:col-span-4 flex flex-col bg-slate-900/60 rounded-2xl border border-slate-800/80 overflow-hidden shadow-xl">
+        <div class="border-b border-slate-800 flex items-center bg-slate-900/90">
+          <button id="tabBaysBtn" onclick="switchRightTab('bays')" class="flex-1 py-3 text-xs font-semibold text-rose-400 border-b-2 border-rose-500 bg-slate-900/40 transition">
+            🏢 Workshop Bays
+          </button>
+          <button id="tabSchedulerBtn" onclick="switchRightTab('scheduler')" class="flex-1 py-3 text-xs font-semibold text-slate-400 hover:text-slate-200 border-b-2 border-transparent transition">
+            🚀 Campaign Batch
+          </button>
+        </div>
+
+        <div id="tabBaysContent" class="flex-1 flex flex-col p-4 overflow-y-auto gap-4">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-300 uppercase tracking-wider">Live Bay Capacity (IST)</span>
+            <button onclick="refreshDmsData()" class="text-xs text-rose-400 hover:text-rose-300 font-mono transition">
+              🔄 Refresh
+            </button>
+          </div>
+          <div id="slotsGridContainer" class="grid grid-cols-2 gap-2.5">
+            <div class="col-span-2 text-center text-slate-500 text-xs py-8">Loading workshop bays...</div>
+          </div>
+        </div>
+
+        <div id="tabSchedulerContent" class="hidden flex-1 flex flex-col p-4 overflow-y-auto gap-4">
+          <div class="p-4 rounded-xl bg-slate-950 border border-slate-800 flex flex-col gap-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-rose-400 uppercase tracking-wider">Automated Scheduler</span>
+              <span class="text-[10px] px-2 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800 font-mono">CRON ACTIVE</span>
+            </div>
+            <p class="text-xs text-slate-400 leading-relaxed">
+              Cloud Scheduler triggers daily batch reminder campaigns for vehicles approaching periodic service intervals.
+            </p>
+            <button id="btnTriggerScheduler" onclick="triggerScheduledBatchRun()" class="w-full py-2.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs shadow-lg shadow-rose-900/30 transition flex items-center justify-center gap-2">
+              <span>🚀</span> Run Daily Service-Due Check Now
+            </button>
+          </div>
+
+          <div>
+            <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Service-Due Customer Queue</h3>
+            <div id="campaignQueueContainer" class="flex flex-col gap-2">
+              <div class="text-center text-slate-500 text-xs py-6">Loading due vehicles from database...</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- VIEW 2: CALL HISTORY & TRANSCRIPTS TAB -->
+  <div id="viewCallLogs" class="hidden flex-1 p-6 flex flex-col gap-6 overflow-y-auto bg-slate-950">
+    <!-- Top Metrics Row -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div class="p-4 rounded-xl bg-slate-900/80 border border-slate-800 flex flex-col gap-1">
+        <span class="text-[11px] text-slate-400 font-medium">Total Outbound Calls</span>
+        <span id="kpiTotalCalls" class="text-2xl font-bold text-white font-mono">0</span>
+      </div>
+      <div class="p-4 rounded-xl bg-emerald-950/20 border border-emerald-800/40 flex flex-col gap-1">
+        <span class="text-[11px] text-emerald-400 font-medium">Service Booked</span>
+        <span id="kpiBookedCalls" class="text-2xl font-bold text-emerald-300 font-mono">0</span>
+      </div>
+      <div class="p-4 rounded-xl bg-amber-950/20 border border-amber-800/40 flex flex-col gap-1">
+        <span class="text-[11px] text-amber-400 font-medium">Callbacks Rescheduled</span>
+        <span id="kpiRescheduledCalls" class="text-2xl font-bold text-amber-300 font-mono">0</span>
+      </div>
+      <div class="p-4 rounded-xl bg-indigo-950/20 border border-indigo-800/40 flex flex-col gap-1">
+        <span class="text-[11px] text-indigo-400 font-medium">Advisor Transfers</span>
+        <span id="kpiTransferredCalls" class="text-2xl font-bold text-indigo-300 font-mono">0</span>
+      </div>
+      <div class="p-4 rounded-xl bg-slate-900/80 border border-slate-800 flex flex-col gap-1">
+        <span class="text-[11px] text-slate-400 font-medium">Avg Call Duration</span>
+        <span id="kpiAvgDuration" class="text-2xl font-bold text-white font-mono">0s</span>
+      </div>
+    </div>
+
+    <!-- Search & Filter Controls -->
+    <div class="p-4 rounded-xl bg-slate-900/60 border border-slate-800 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-3 flex-1 min-w-[280px]">
+        <div class="relative flex-1">
+          <input type="text" id="callLogSearchInput" oninput="filterCallLogs()" placeholder="Search customer name, phone, vehicle model, or registration number..." class="w-full bg-slate-950 border border-slate-700 text-xs text-white rounded-lg pl-9 pr-3 py-2 focus:ring-2 focus:ring-rose-500 focus:outline-none placeholder-slate-500" />
+          <span class="absolute left-3 top-2.5 text-slate-500 text-xs">🔍</span>
+        </div>
+        <select id="callLogDispositionFilter" onchange="filterCallLogs()" class="bg-slate-950 border border-slate-700 text-xs text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-rose-500 focus:outline-none">
+          <option value="ALL">All Outcomes</option>
+          <option value="BOOKED">🟢 Confirmed Bookings</option>
+          <option value="RESCHEDULED">🟡 Rescheduled Callbacks</option>
+          <option value="TRANSFERRED">🔵 Advisor Transfers</option>
+          <option value="ALREADY_SERVICED">⚪ Already Serviced</option>
+          <option value="DECLINED">🔴 Declined / Not Interested</option>
+        </select>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <button onclick="loadCallLogsData()" class="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-white flex items-center gap-1.5 transition">
+          <span>🔄</span> Refresh Logs
+        </button>
+      </div>
+    </div>
+
+    <!-- Calls Table Container -->
+    <div class="rounded-xl border border-slate-800 bg-slate-900/60 overflow-hidden shadow-xl">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs font-mono">
+          <thead class="bg-slate-950/80 border-b border-slate-800 text-slate-400 uppercase text-[10px]">
+            <tr>
+              <th class="p-3.5">Call Date & Time (IST)</th>
+              <th class="p-3.5">Customer</th>
+              <th class="p-3.5">Vehicle</th>
+              <th class="p-3.5">Channel</th>
+              <th class="p-3.5">Duration</th>
+              <th class="p-3.5">Outcome / Disposition</th>
+              <th class="p-3.5">Scheduled Callback (IST)</th>
+              <th class="p-3.5 text-right">Action</th>
+            </tr>
+          </thead>
+          <tbody id="callLogsTableBody" class="divide-y divide-slate-800/60 text-slate-300">
+            <tr>
+              <td colspan="8" class="p-8 text-center text-slate-500 italic">Loading call records from database...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- CALL DETAILS & TRANSCRIPT INSPECTION MODAL -->
+  <div id="callTranscriptModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl max-h-[90vh] shadow-2xl flex flex-col overflow-hidden">
+      <!-- Modal Header -->
+      <div class="p-5 border-b border-slate-800 bg-slate-950/60 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <span class="text-xl">📋</span>
+          <div>
+            <h3 id="modalCallCustName" class="font-bold text-sm text-white">Call Details & Transcript</h3>
+            <p id="modalCallSubtext" class="text-xs text-slate-400 font-mono">Loading...</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="copyModalTranscriptText()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-sans transition">
+            📋 Copy Transcript
+          </button>
+          <button onclick="closeCallDetailsModal()" class="text-slate-400 hover:text-white text-xl font-bold px-2">&times;</button>
+        </div>
+      </div>
+
+      <!-- Modal Body Split: Transcript & Tools -->
+      <div class="flex-1 grid grid-cols-1 md:grid-cols-12 gap-4 p-5 overflow-hidden">
+        <!-- Transcript Column (7 cols) -->
+        <div class="md:col-span-7 flex flex-col bg-slate-950/70 rounded-xl border border-slate-800/80 overflow-hidden">
+          <div class="px-4 py-2.5 bg-slate-900/80 border-b border-slate-800 text-xs font-bold text-slate-300 flex items-center justify-between">
+            <span>💬 Full Audio Transcript (IST)</span>
+            <span id="modalTranscriptCount" class="text-[10px] text-slate-500 font-mono">0 turns</span>
+          </div>
+          <div id="modalTranscriptBody" class="flex-1 p-4 overflow-y-auto max-h-[55vh] flex flex-col gap-3">
+            <!-- Bubbles injected dynamically -->
+          </div>
+        </div>
+
+        <!-- Tool Calls Column (5 cols) -->
+        <div class="md:col-span-5 flex flex-col bg-slate-950/70 rounded-xl border border-slate-800/80 overflow-hidden">
+          <div class="px-4 py-2.5 bg-slate-900/80 border-b border-slate-800 text-xs font-bold text-slate-300 flex items-center justify-between">
+            <span>🔧 Tools Executed & Results</span>
+            <span id="modalToolCount" class="text-[10px] text-slate-500 font-mono">0 tools</span>
+          </div>
+          <div id="modalToolBody" class="flex-1 p-4 overflow-y-auto max-h-[55vh] flex flex-col gap-3">
+            <!-- Tool cards injected dynamically -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TWILIO PSTN OUTBOUND DIALER MODAL -->
+  <div id="dialerModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl flex flex-col gap-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div class="flex items-center gap-2">
+          <span class="text-rose-500 text-lg">📞</span>
+          <h3 class="font-bold text-sm text-white">Outbound PSTN Phone Call</h3>
+        </div>
+        <button onclick="closeTwilioDialerModal()" class="text-slate-400 hover:text-white text-lg font-bold">&times;</button>
+      </div>
+
+      <div class="flex flex-col gap-3 text-xs">
+        <div>
+          <label class="font-semibold text-slate-400 block mb-1">Target Phone Number (Your Mobile)</label>
+          <input id="modalPhoneNumber" type="tel" value="+919820198201" placeholder="+9198XXXXXXXX" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono focus:ring-2 focus:ring-rose-500 focus:outline-none">
+          <span class="text-[10px] text-slate-500 mt-1 block">Include country code (e.g. +91 for India, +1 for US)</span>
+        </div>
+
+        <div>
+          <label class="font-semibold text-slate-400 block mb-1">Selected Vehicle Profile</label>
+          <div id="modalVehicleInfo" class="p-2.5 rounded-lg bg-slate-950 border border-slate-800 font-mono text-[11px] text-slate-300">
+            Loading...
+          </div>
+        </div>
+
+        <div class="p-3 rounded-lg bg-rose-950/30 border border-rose-900/50 text-[11px] text-rose-300">
+          Twilio will call your phone and connect Gemini 2.5 Live voice with bidirectional 8kHz G.711u audio streaming.
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-3 pt-2">
+        <button onclick="closeTwilioDialerModal()" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs transition">
+          Cancel
+        </button>
+        <button id="btnOriginateCall" onclick="originateTwilioCall()" class="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs shadow-lg shadow-rose-900/40 flex items-center gap-2 transition">
+          <span>📞</span> Place Live Call
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let customersList = [];
+    let currentCustomer = null;
+    let telemetryWs = null;
+    let browserAudioWs = null;
+    let audioContext = null;
+    let mediaStream = null;
+    let isBrowserCallActive = false;
+    let isBrowserCallConnecting = false;
+    let nextAudioPlayTime = 0;
+    let totalToolsFired = 0;
+    let currentAudioEnergy = 0;
+    let msgCount = 0;
+    let allCallLogs = [];
+    let currentActiveTab = 'console';
+
+    // Formats dates and times in Indian Standard Time (IST)
+    function formatToIST(dateVal, includeDate = true) {
+      if (dateVal === undefined || dateVal === null || dateVal === '') return '--';
+      const strVal = String(dateVal).trim();
+      if (strVal.includes('IST')) return strVal;
+      try {
+        let d;
+        if (typeof dateVal === 'number') {
+          d = dateVal < 1e11 ? new Date(dateVal * 1000) : new Date(dateVal);
+        } else if (/^\d+(\.\d+)?$/.test(strVal)) {
+          const num = parseFloat(strVal);
+          d = num < 1e11 ? new Date(num * 1000) : new Date(num);
+        } else {
+          d = new Date(dateVal);
+        }
+
+        if (isNaN(d.getTime())) return strVal;
+        
+        const options = {
+          timeZone: 'Asia/Kolkata',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: true
+        };
+        if (includeDate) {
+          options.day = '2-digit';
+          options.month = 'short';
+          options.year = 'numeric';
+        }
+        return d.toLocaleString('en-IN', options) + ' IST';
+      } catch (e) {
+        return strVal;
+      }
+    }
+
+    function getNowISTTime() {
+      return new Date().toLocaleTimeString('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+      }) + ' IST';
+    }
+
+    // Start Live IST Clock in header
+    setInterval(() => {
+      const el = document.getElementById('liveClockText');
+      if (el) el.textContent = getNowISTTime();
+    }, 1000);
+
+    async function initApp() {
+      try { await loadCustomers(); } catch (e) { console.error('loadCustomers:', e); }
+      try { await refreshDmsData(); } catch (e) { console.error('refreshDmsData:', e); }
+      try { await loadCampaignQueue(); } catch (e) { console.error('loadCampaignQueue:', e); }
+      try { await loadCallLogsData(); } catch (e) { console.error('loadCallLogsData:', e); }
+      try { initTelemetryWebSocket(); } catch (e) { console.error('initTelemetry:', e); }
+      try { initWaveformCanvas(); } catch (e) { console.error('initWaveform:', e); }
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initApp);
+    } else {
+      initApp();
+    }
+
+    function switchViewTab(tab) {
+      currentActiveTab = tab;
+      const consoleView = document.getElementById('viewConsole');
+      const logsView = document.getElementById('viewCallLogs');
+      const tabBtnConsole = document.getElementById('tabBtnConsole');
+      const tabBtnLogs = document.getElementById('tabBtnCallLogs');
+
+      if (tab === 'console') {
+        consoleView.classList.remove('hidden');
+        logsView.classList.add('hidden');
+        tabBtnConsole.className = 'py-3 px-4 border-b-2 border-rose-500 text-rose-400 font-semibold text-xs flex items-center gap-2 transition';
+        tabBtnLogs.className = 'py-3 px-4 border-b-2 border-transparent text-slate-400 hover:text-slate-200 font-semibold text-xs flex items-center gap-2 transition';
+      } else {
+        consoleView.classList.add('hidden');
+        logsView.classList.remove('hidden');
+        tabBtnConsole.className = 'py-3 px-4 border-b-2 border-transparent text-slate-400 hover:text-slate-200 font-semibold text-xs flex items-center gap-2 transition';
+        tabBtnLogs.className = 'py-3 px-4 border-b-2 border-rose-500 text-rose-400 font-semibold text-xs flex items-center gap-2 transition';
+        loadCallLogsData();
+      }
+    }
+
+    async function loadCustomers() {
+      try {
+        const res = await fetch('/api/customers');
+        if (!res.ok) throw new Error('Database API status ' + res.status);
+        customersList = await res.json();
+        const select = document.getElementById('customerSelect');
+        if (!select) return;
+        select.innerHTML = '';
+
+        if (!customersList || customersList.length === 0) {
+          select.innerHTML = '<option value="">No customer records in database</option>';
+          return;
+        }
+
+        customersList.forEach((c) => {
+          const opt = document.createElement('option');
+          opt.value = c.customer_id;
+          opt.textContent = `${c.full_name} (${c.vehicle?.model_name || 'Vehicle'}) - ${c.vehicle?.registration_number || ''}`;
+          select.appendChild(opt);
+        });
+
+        onCustomerChange(customersList[0].customer_id);
+      } catch (err) {
+        console.error('Error loading customers:', err);
+      }
+    }
+
+    function onCustomerChange(customerId) {
+      currentCustomer = customersList.find((c) => c.customer_id === customerId);
+      if (!currentCustomer) return;
+
+      const v = currentCustomer.vehicle || {};
+      const d = currentCustomer.dealership || {};
+
+      document.getElementById('barVehicleModel').textContent = v.model_name || 'Mahindra Vehicle';
+      document.getElementById('barRegNumber').textContent = v.registration_number || 'MH-12-XX-0000';
+      document.getElementById('barOdometer').textContent = (v.current_odometer_km ? v.current_odometer_km.toLocaleString() : '20,000') + ' km';
+      document.getElementById('barServiceDue').textContent = v.service_due_type || '20,000 km Service';
+      document.getElementById('barDealerName').textContent = d.name || 'Mahindra Authorized Pune';
+
+      const modalInfo = document.getElementById('modalVehicleInfo');
+      if (modalInfo) {
+        modalInfo.innerHTML = `
+          <div><strong>Customer:</strong> ${currentCustomer.full_name}</div>
+          <div><strong>Vehicle:</strong> ${v.model_name} (${v.registration_number || 'N/A'})</div>
+          <div><strong>Service Due:</strong> ${v.service_due_type || 'Periodic Maintenance'}</div>
+        `;
+      }
+      if (currentCustomer.phone_number) {
+        const phoneInput = document.getElementById('modalPhoneNumber');
+        if (phoneInput) phoneInput.value = currentCustomer.phone_number;
+      }
+    }
+
+    function initTelemetryWebSocket() {
+      const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${proto}//${window.location.host}/ws/telemetry`;
+      telemetryWs = new WebSocket(wsUrl);
+
+      telemetryWs.onopen = () => {
+        document.getElementById('wsStatusDot').className = 'w-2 h-2 rounded-full bg-emerald-500';
+        document.getElementById('wsStatusText').textContent = 'Connected (Telemetry)';
+      };
+
+      telemetryWs.onclose = () => {
+        document.getElementById('wsStatusDot').className = 'w-2 h-2 rounded-full bg-rose-500';
+        document.getElementById('wsStatusText').textContent = 'Disconnected';
+        setTimeout(initTelemetryWebSocket, 3000);
+      };
+
+      telemetryWs.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          handleTelemetryMessage(msg);
+        } catch (e) {
+          console.error('Telemetry parse error:', e);
+        }
+      };
+    }
+
+    function handleTelemetryMessage(msg) {
+      const type = msg.type;
+      const data = msg.data || {};
+
+      if (type === 'CALL_INITIATED' || type === 'CALL_STARTED') {
+        setCallState('CALL ACTIVE');
+        const custName = data.customer_name || data.profile?.customer?.full_name || 'Customer';
+        const phone = data.to_phone || data.profile?.customer?.phone_number || '';
+        addTranscriptBubble('system', `Voice session connected with ${custName} (${phone})`, getNowISTTime(), false);
+      } else if (type === 'AUDIO_TRANSCRIPT' || type === 'TRANSCRIPT') {
+        const role = data.role || data.entry?.role || 'assistant';
+        const text = data.text || data.entry?.text || '';
+        const timestamp = data.timestamp || getNowISTTime();
+        const isStreaming = data.is_streaming === true;
+        if (text) {
+          addTranscriptBubble(role, text, timestamp, isStreaming);
+        }
+      } else if (type === 'TOOL_EXECUTION') {
+        addToolExecutionCard(data);
+        totalToolsFired++;
+        document.getElementById('statToolsFired').textContent = totalToolsFired;
+        refreshDmsData();
+      } else if (type === 'BARGE_IN_DETECTED' || type === 'BARGE_IN') {
+        showBargeInAlert();
+        activeAudioNodes.forEach(node => {
+          try { node.stop(); } catch(e) {}
+        });
+        activeAudioNodes = [];
+        nextAudioPlayTime = audioContext ? audioContext.currentTime : 0;
+      } else if (type === 'CALL_ENDED') {
+        if (isBrowserCallActive) {
+          stopBrowserCall();
+        }
+        loadCallLogsData();
+      } else if (type === 'DMS_SLOT_UPDATE') {
+        refreshDmsData();
+      }
+    }
+
+    function setCallState(state) {
+      const badge = document.getElementById('callStateBadge');
+      badge.textContent = state;
+      if (state.includes('LIVE') || state.includes('ACTIVE')) {
+        badge.className = 'text-[11px] font-mono px-2.5 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800 animate-pulse';
+      } else if (state.includes('DIALING')) {
+        badge.className = 'text-[11px] font-mono px-2.5 py-0.5 rounded-full bg-amber-950 text-amber-300 border border-amber-800 animate-pulse';
+      } else {
+        badge.className = 'text-[11px] font-mono px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700';
+      }
+    }
+
+    async function toggleBrowserCall() {
+      if (isBrowserCallActive || isBrowserCallConnecting) {
+        stopBrowserCall();
+      } else {
+        await startBrowserCall();
+      }
+    }
+
+    async function startBrowserCall() {
+      if (isBrowserCallConnecting || isBrowserCallActive) return;
+      isBrowserCallConnecting = true;
+      document.getElementById('btnBrowserCallText').textContent = 'Connecting...';
+      try {
+        if (!audioContext) {
+          audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioContext.state === 'suspended') {
+          await audioContext.resume();
+        }
+
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            channelCount: 1,
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          }
+        });
+        const source = audioContext.createMediaStreamSource(mediaStream);
+
+        const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const customerId = currentCustomer?.customer_id || 'CUST-101';
+        browserAudioWs = new WebSocket(`${proto}//${window.location.host}/ws/browser/stream?customer_id=${customerId}`);
+        browserAudioWs.binaryType = 'arraybuffer';
+
+        browserAudioWs.onopen = () => {
+          isBrowserCallActive = true;
+          isBrowserCallConnecting = false;
+          nextAudioPlayTime = 0;
+          setCallState('LIVE STREAMING (Gemini Live)');
+          document.getElementById('btnBrowserCallText').textContent = 'End Voice Call';
+          document.getElementById('btnBrowserCallIcon').textContent = '🛑';
+          document.getElementById('waveformOverlay').style.display = 'none';
+        };
+
+        browserAudioWs.onmessage = async (event) => {
+          if (typeof event.data === 'string') {
+            try {
+              const msg = JSON.parse(event.data);
+              if (msg.action === 'CALL_ENDED' || msg.action === 'STOP') {
+                stopBrowserCall();
+              }
+            } catch(e) {}
+          } else if (event.data instanceof Blob) {
+            const buffer = await event.data.arrayBuffer();
+            playGeminiAudioChunk(buffer);
+          } else if (event.data instanceof ArrayBuffer) {
+            playGeminiAudioChunk(event.data);
+          }
+        };
+
+        browserAudioWs.onclose = () => {
+          stopBrowserCall();
+        };
+
+        const bufferSize = 2048;
+        const scriptNode = audioContext.createScriptProcessor(bufferSize, 1, 1);
+        const silentGain = audioContext.createGain();
+        silentGain.gain.value = 0.0;
+        source.connect(scriptNode);
+        scriptNode.connect(silentGain);
+        silentGain.connect(audioContext.destination);
+
+        const inputSampleRate = audioContext.sampleRate;
+        scriptNode.onaudioprocess = (e) => {
+          if (!isBrowserCallActive || !browserAudioWs || browserAudioWs.readyState !== WebSocket.OPEN) return;
+          const inputData = e.inputBuffer.getChannelData(0);
+          
+          const ratio = inputSampleRate / 16000;
+          const newLength = Math.round(inputData.length / ratio);
+          const pcm16 = new Int16Array(newLength);
+          let energy = 0;
+          for (let i = 0; i < newLength; i++) {
+            const offset = Math.min(inputData.length - 1, Math.round(i * ratio));
+            const s = Math.max(-1, Math.min(1, inputData[offset]));
+            pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+            energy += Math.abs(s);
+          }
+          if (!currentAudioEnergy || currentAudioEnergy < 0.1) {
+            currentAudioEnergy = Math.min(1.0, (energy / newLength) * 4.0);
+          }
+          browserAudioWs.send(pcm16.buffer);
+        };
+
+        initSpeechRecognition();
+        if (speechRecognizer) {
+          try { speechRecognizer.start(); } catch (e) {}
+        }
+      } catch (err) {
+        isBrowserCallConnecting = false;
+        document.getElementById('btnBrowserCallText').textContent = 'Start Browser Call';
+        console.error('Error starting mic stream:', err);
+        alert('Could not access microphone: ' + err.message);
+      }
+    }
+
+    let speechRecognizer = null;
+    function initSpeechRecognition() {
+      const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRec) return;
+      try {
+        speechRecognizer = new SpeechRec();
+        speechRecognizer.continuous = true;
+        speechRecognizer.interimResults = false;
+        speechRecognizer.lang = 'hi-IN';
+
+        speechRecognizer.onresult = (event) => {
+          for (let i = event.resultIndex; i < event.results.length; ++i) {
+            if (event.results[i].isFinal) {
+              const text = event.results[i][0].transcript.trim();
+              if (text && isBrowserCallActive) {
+                sendUserSpeech(text);
+              }
+            }
+          }
+        };
+
+        speechRecognizer.onerror = (e) => {};
+        speechRecognizer.onend = () => {
+          if (isBrowserCallActive && speechRecognizer) {
+            try { speechRecognizer.start(); } catch (err) {}
+          }
+        };
+      } catch (err) {}
+    }
+
+    function sendUserSpeech(text) {
+      if (!text) return;
+
+      activeAudioNodes.forEach(node => {
+        try { node.stop(); } catch (e) {}
+      });
+      activeAudioNodes = [];
+      nextAudioPlayTime = audioContext ? audioContext.currentTime : 0;
+      showBargeInAlert();
+
+      if (!isBrowserCallActive) {
+        startBrowserCall().then(() => {
+          setTimeout(() => {
+            if (browserAudioWs && browserAudioWs.readyState === WebSocket.OPEN) {
+              browserAudioWs.send(JSON.stringify({ type: 'user_speech', text: text }));
+            }
+          }, 800);
+        });
+        return;
+      }
+      if (browserAudioWs && browserAudioWs.readyState === WebSocket.OPEN) {
+        browserAudioWs.send(JSON.stringify({ type: 'user_speech', text: text }));
+      }
+    }
+
+    let activeAudioNodes = [];
+
+    function stopBrowserCall() {
+      isBrowserCallActive = false;
+      isBrowserCallConnecting = false;
+      nextAudioPlayTime = 0;
+
+      if (speechRecognizer) {
+        try { speechRecognizer.stop(); } catch (e) {}
+      }
+
+      activeAudioNodes.forEach(node => {
+        try { node.stop(); } catch (e) {}
+      });
+      activeAudioNodes = [];
+
+      if (audioContext && audioContext.state !== 'closed') {
+        try { audioContext.suspend(); } catch (e) {}
+      }
+
+      if (mediaStream) {
+        mediaStream.getTracks().forEach(t => t.stop());
+        mediaStream = null;
+      }
+
+      if (browserAudioWs) {
+        try {
+          if (browserAudioWs.readyState === WebSocket.OPEN) {
+            browserAudioWs.send(JSON.stringify({ action: 'STOP', text: 'STOP' }));
+          }
+        } catch (e) {}
+        try { browserAudioWs.close(); } catch (e) {}
+        browserAudioWs = null;
+      }
+
+      setCallState('IDLE');
+      document.getElementById('btnBrowserCallText').textContent = 'Start Browser Call';
+      document.getElementById('btnBrowserCallIcon').textContent = '🎙️';
+      document.getElementById('waveformOverlay').style.display = 'flex';
+      currentAudioEnergy = 0;
+    }
+
+    function playGeminiAudioChunk(arrayBuffer) {
+      if (!isBrowserCallActive) return;
+
+      if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioContext.state === 'suspended') {
+        audioContext.resume();
+      }
+
+      const byteLength = arrayBuffer.byteLength;
+      const numSamples = Math.floor(byteLength / 2);
+      if (numSamples === 0) return;
+
+      const pcm16 = new Int16Array(arrayBuffer, 0, numSamples);
+      const float32 = new Float32Array(numSamples);
+      let sum = 0;
+      for (let i = 0; i < numSamples; i++) {
+        const val = pcm16[i] / 32768.0;
+        float32[i] = val;
+        sum += Math.abs(val);
+      }
+      currentAudioEnergy = Math.min(1.0, (sum / numSamples) * 6.0);
+
+      const audioBuffer = audioContext.createBuffer(1, numSamples, 24000);
+      audioBuffer.getChannelData(0).set(float32);
+
+      const sourceNode = audioContext.createBufferSource();
+      sourceNode.buffer = audioBuffer;
+
+      const gainNode = audioContext.createGain();
+      gainNode.gain.value = 2.0;
+      sourceNode.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      const now = audioContext.currentTime;
+      if (nextAudioPlayTime < now) {
+        nextAudioPlayTime = now;
+      }
+      sourceNode.start(nextAudioPlayTime);
+      nextAudioPlayTime += audioBuffer.duration;
+
+      activeAudioNodes.push(sourceNode);
+
+      sourceNode.onended = () => {
+        const idx = activeAudioNodes.indexOf(sourceNode);
+        if (idx !== -1) activeAudioNodes.splice(idx, 1);
+        if (audioContext && audioContext.currentTime >= nextAudioPlayTime - 0.05) {
+          currentAudioEnergy = 0.05;
+        }
+      };
+    }
+
+    function initWaveformCanvas() {
+      const canvas = document.getElementById('waveformCanvas');
+      const ctx = canvas.getContext('2d');
+
+      function draw() {
+        requestAnimationFrame(draw);
+        ctx.fillStyle = '#020617';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        const width = canvas.width;
+        const height = canvas.height;
+        const bars = 36;
+        const barWidth = width / bars - 2;
+
+        for (let i = 0; i < bars; i++) {
+          const factor = Math.sin((i / bars) * Math.PI) * (isBrowserCallActive ? (currentAudioEnergy * 4 + 0.1) : 0.05);
+          const barHeight = Math.max(4, factor * height * 0.8);
+          const x = i * (barWidth + 2);
+          const y = (height - barHeight) / 2;
+
+          ctx.fillStyle = isBrowserCallActive ? '#f43f5e' : '#334155';
+          ctx.fillRect(x, y, barWidth, barHeight);
+        }
+      }
+      draw();
+    }
+
+    let lastTranscriptRole = null;
+    let lastTranscriptBubbleDiv = null;
+
+    // Single cohesive bubble per conversational turn (no fragmented words)
+    function addTranscriptBubble(role, text, timestamp, isStreaming) {
+      if (!text || !text.trim()) return;
+      const container = document.getElementById('transcriptContainer');
+      if (!container) return;
+
+      if (msgCount === 0 || container.innerText.includes('Conversation transcript will appear')) {
+        container.innerHTML = '';
+      }
+
+      const isAi = role === 'agent' || role === 'model' || role === 'assistant';
+      const roleKey = isAi ? 'assistant' : (role === 'system' ? 'system' : 'customer');
+      const cleanText = text.trim();
+
+      // If streaming delta from AI in active turn, update the existing bubble in-place!
+      if (isAi && isStreaming && lastTranscriptRole === 'assistant' && lastTranscriptBubbleDiv) {
+        const textContentDiv = lastTranscriptBubbleDiv.querySelector('.transcript-text');
+        if (textContentDiv) {
+          textContentDiv.textContent = cleanText;
+          container.scrollTop = container.scrollHeight;
+          return;
+        }
+      }
+
+      // Customer turn deduplication
+      if (!isAi && roleKey === 'customer' && lastTranscriptRole === 'customer' && lastTranscriptBubbleDiv) {
+        const textContentDiv = lastTranscriptBubbleDiv.querySelector('.transcript-text');
+        if (textContentDiv) {
+          const current = textContentDiv.textContent.trim();
+          if (current === cleanText || current.endsWith(cleanText)) {
+            return;
+          }
+          if (cleanText.length > current.length && cleanText.startsWith(current)) {
+            textContentDiv.textContent = cleanText;
+            container.scrollTop = container.scrollHeight;
+            return;
+          }
+        }
+      }
+
+      lastTranscriptRole = roleKey;
+      const roleLabel = isAi ? 'AI Concierge (Pooja)' : (role === 'system' ? 'System' : 'Customer');
+      const roleBadgeClass = isAi ? 'bg-rose-950 text-rose-300 border-rose-800' : (role === 'system' ? 'bg-slate-800 text-slate-400 border-slate-700' : 'bg-indigo-950 text-indigo-300 border-indigo-800');
+      const displayTime = timestamp || getNowISTTime();
+
+      const div = document.createElement('div');
+      div.className = 'transcript-bubble flex flex-col gap-1 text-xs';
+      div.innerHTML = `
+        <div class="flex items-center gap-2">
+          <span class="text-[10px] font-mono px-2 py-0.5 rounded border ${roleBadgeClass}">${roleLabel}</span>
+          <span class="text-[10px] text-slate-500 font-mono">${displayTime}</span>
+        </div>
+        <div class="transcript-text p-3 rounded-xl ${isAi ? 'bg-slate-900 border border-slate-800 text-slate-100' : 'bg-slate-950 border border-slate-800 text-slate-200'} leading-relaxed font-sans">
+          ${cleanText}
+        </div>
+      `;
+
+      container.appendChild(div);
+      lastTranscriptBubbleDiv = div;
+      container.scrollTop = container.scrollHeight;
+      msgCount++;
+      const countEl = document.getElementById('transcriptCount');
+      if (countEl) countEl.textContent = `${msgCount} turns`;
+    }
+
+    function clearTranscript() {
+      document.getElementById('transcriptContainer').innerHTML = '<div class="flex items-center justify-center h-full text-slate-600 text-xs italic">Transcript cleared.</div>';
+      msgCount = 0;
+      lastTranscriptRole = null;
+      lastTranscriptBubbleDiv = null;
+      document.getElementById('transcriptCount').textContent = '0 turns';
+    }
+
+    function showBargeInAlert() {
+      const badge = document.getElementById('bargeInBadge');
+      badge.classList.remove('hidden');
+      setTimeout(() => badge.classList.add('hidden'), 2500);
+    }
+
+    function addToolExecutionCard(data) {
+      const container = document.getElementById('toolFeedContainer');
+      if (totalToolsFired === 0 || container.innerText.includes('Autonomous reasoning and DMS tool executions will appear')) {
+        container.innerHTML = '';
+      }
+
+      const ev = data.event || data || {};
+      const toolName = ev.tool_name || data.tool_name || 'DMS Tool';
+      const latency = ev.latency_ms ? `${ev.latency_ms}ms` : (data.execution_latency_ms ? `${data.execution_latency_ms}ms` : '<30ms');
+      const args = ev.args || data.parameters || {};
+      const result = ev.result || data.result || {};
+
+      const toolIcons = {
+        'get_customer_vehicle_profile': '📋',
+        'get_service_cost_estimate': '💰',
+        'check_available_slots': '📅',
+        'hold_service_slot': '🔒',
+        'book_service_appointment': '🚗',
+        'reschedule_reminder': '⏰',
+        'record_customer_disposition': '📝',
+        'transfer_to_service_advisor': '📞',
+        'end_call': '🛑'
+      };
+      const icon = toolIcons[toolName] || '🔧';
+
+      const card = document.createElement('div');
+      card.className = 'p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex flex-col gap-2 text-xs font-mono shadow-sm';
+      card.innerHTML = `
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+          <span class="font-bold text-indigo-400 flex items-center gap-1.5">${icon} ${toolName}</span>
+          <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800">${latency}</span>
+        </div>
+        <div class="text-[11px] text-slate-400">
+          <span class="text-slate-500 font-semibold">Args:</span>
+          <pre class="mt-1 p-2 rounded bg-slate-900/90 text-amber-300/90 overflow-x-auto text-[10px]">${JSON.stringify(args, null, 2)}</pre>
+        </div>
+        <div class="text-[11px] text-slate-300">
+          <span class="text-slate-500 font-semibold">Result:</span>
+          <pre class="mt-1 p-2 rounded bg-slate-900/90 text-emerald-300/90 overflow-x-auto text-[10px] max-h-40 overflow-y-auto">${JSON.stringify(result, null, 2)}</pre>
+        </div>
+      `;
+
+      container.prepend(card);
+    }
+
+    async function refreshDmsData() {
+      try {
+        const dealerId = currentCustomer?.dealership?.dealer_id || 'DLR-PUN-01';
+        const res = await fetch('/api/slots?dealer_id=' + encodeURIComponent(dealerId));
+        const slots = await res.json();
+        const container = document.getElementById('slotsGridContainer');
+        container.innerHTML = '';
+
+        if (!slots || slots.length === 0) {
+          container.innerHTML = '<div class="col-span-2 text-center text-slate-500 text-xs py-8">No open workshop bays in database for this dealer.</div>';
+          return;
+        }
+
+        slots.slice(0, 10).forEach(slot => {
+          const card = document.createElement('div');
+          const isBooked = slot.is_booked;
+          const isHeld = slot.is_locked;
+
+          let statusClass = 'border-emerald-800/60 bg-emerald-950/20 text-emerald-300';
+          let statusText = 'OPEN';
+          if (isBooked) {
+            statusClass = 'border-rose-800/60 bg-rose-950/30 text-rose-400';
+            statusText = 'BOOKED';
+          } else if (isHeld) {
+            statusClass = 'border-amber-800/60 bg-amber-950/30 text-amber-300 animate-pulse';
+            statusText = 'HELD (180s)';
+          }
+
+          const slotTimeIST = formatToIST(slot.slot_time, false);
+
+          card.className = `p-3 rounded-xl border ${statusClass} flex flex-col gap-1 text-xs font-mono`;
+          card.innerHTML = `
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-white">Bay ${slot.bay_number}</span>
+              <span class="text-[10px] font-semibold">${statusText}</span>
+            </div>
+            <div class="text-[11px] text-slate-300">${slotTimeIST}</div>
+          `;
+          container.appendChild(card);
+        });
+      } catch (err) {
+        console.error('Error fetching DMS slots:', err);
+      }
+    }
+
+    function switchRightTab(tab) {
+      if (tab === 'bays') {
+        document.getElementById('tabBaysContent').classList.remove('hidden');
+        document.getElementById('tabSchedulerContent').classList.add('hidden');
+        document.getElementById('tabBaysBtn').className = 'flex-1 py-3 text-xs font-semibold text-rose-400 border-b-2 border-rose-500 bg-slate-900/40 transition';
+        document.getElementById('tabSchedulerBtn').className = 'flex-1 py-3 text-xs font-semibold text-slate-400 hover:text-slate-200 border-b-2 border-transparent transition';
+      } else {
+        document.getElementById('tabBaysContent').classList.add('hidden');
+        document.getElementById('tabSchedulerContent').classList.remove('hidden');
+        document.getElementById('tabBaysBtn').className = 'flex-1 py-3 text-xs font-semibold text-slate-400 hover:text-slate-200 border-b-2 border-transparent transition';
+        document.getElementById('tabSchedulerBtn').className = 'flex-1 py-3 text-xs font-semibold text-rose-400 border-b-2 border-rose-500 bg-slate-900/40 transition';
+      }
+    }
+
+    async function loadCampaignQueue() {
+      try {
+        const res = await fetch('/api/campaign/queue');
+        const queue = await res.json();
+        const container = document.getElementById('campaignQueueContainer');
+        container.innerHTML = '';
+
+        if (!queue || queue.length === 0) {
+          container.innerHTML = '<div class="text-center text-slate-500 text-xs py-6">No pending service-due vehicles in database.</div>';
+          return;
+        }
+
+        queue.forEach(item => {
+          const row = document.createElement('div');
+          row.className = 'p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between text-xs font-mono';
+          row.innerHTML = `
+            <div>
+              <div class="font-bold text-white">${item.full_name} <span class="text-slate-500 font-normal">(${item.model_name})</span></div>
+              <div class="text-[10px] text-amber-400">${item.service_due_type}</div>
+            </div>
+            <button onclick="dialCustomerFromQueue('${item.customer_id}', '${item.phone_number}')" class="px-2.5 py-1 rounded bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-sans font-semibold transition">
+              Dial
+            </button>
+          `;
+          container.appendChild(row);
+        });
+      } catch (err) {
+        console.error('Error loading campaign queue:', err);
+      }
+    }
+
+    async function triggerScheduledBatchRun() {
+      const btn = document.getElementById('btnTriggerScheduler');
+      btn.textContent = 'Triggering Batch...';
+      btn.disabled = true;
+
+      try {
+        const res = await fetch('/api/campaign/trigger-scheduled-run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ max_calls: 3 })
+        });
+        const result = await res.json();
+        alert(`Cloud Scheduler Batch Dispatched (IST):\nTotal Calls: ${result.dispatched_count}\nTRAI Window: ${result.trai_compliance}`);
+        await loadCampaignQueue();
+        await loadCallLogsData();
+      } catch (err) {
+        alert('Error triggering campaign: ' + err.message);
+      } finally {
+        btn.textContent = '🚀 Run Daily Service-Due Check Now';
+        btn.disabled = false;
+      }
+    }
+
+    function dialCustomerFromQueue(customerId, phone) {
+      onCustomerChange(customerId);
+      document.getElementById('customerSelect').value = customerId;
+      document.getElementById('modalPhoneNumber').value = phone;
+      openTwilioDialerModal();
+    }
+
+    function openTwilioDialerModal() {
+      document.getElementById('dialerModal').classList.remove('hidden');
+    }
+    function closeTwilioDialerModal() {
+      document.getElementById('dialerModal').classList.add('hidden');
+    }
+
+    async function originateTwilioCall() {
+      const phone = document.getElementById('modalPhoneNumber').value;
+      const customerId = currentCustomer?.customer_id || 'CUST-101';
+      const vin = currentCustomer?.vehicle?.vin;
+
+      const btn = document.getElementById('btnOriginateCall');
+      btn.textContent = 'Dialing...';
+      btn.disabled = true;
+
+      try {
+        const res = await fetch('/api/telephony/originate-call', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            customer_id: customerId,
+            phone_number: phone,
+            vin: vin
+          })
+        });
+        const data = await res.json();
+        closeTwilioDialerModal();
+        setCallState(`DIALING (${phone})`);
+        addTranscriptBubble('system', `PSTN Call Originated: Call SID ${data.call_sid || 'CA_SIMULATED'}`, getNowISTTime(), false);
+      } catch (err) {
+        alert('Failed to place call: ' + err.message);
+      } finally {
+        btn.textContent = 'Place Live Call';
+        btn.disabled = false;
+      }
+    }
+
+    // =========================================================================
+    // CALL HISTORY, TRANSCRIPTS & ANALYTICS TAB
+    // =========================================================================
+
+    async function loadCallLogsData() {
+      try {
+        const res = await fetch('/api/call-logs');
+        if (!res.ok) throw new Error('API status ' + res.status);
+        allCallLogs = await res.json();
+        const badge = document.getElementById('callLogsBadgeCount');
+        if (badge) badge.textContent = allCallLogs.length;
+
+        // Update KPIs
+        updateCallLogKpis(allCallLogs);
+
+        // Render Table
+        renderCallLogsTable(allCallLogs);
+      } catch (err) {
+        console.error('Error loading call logs:', err);
+      }
+    }
+
+    function updateCallLogKpis(logs) {
+      const total = logs.length;
+      let booked = 0;
+      let rescheduled = 0;
+      let transferred = 0;
+      let totalDuration = 0;
+
+      logs.forEach(l => {
+        const disp = (l.disposition || '').toUpperCase();
+        if (disp === 'BOOKED' || disp === 'CONFIRMED') booked++;
+        else if (disp === 'RESCHEDULED') rescheduled++;
+        else if (disp === 'TRANSFERRED') transferred++;
+
+        totalDuration += (l.duration_seconds || 0);
+      });
+
+      const avgDurationSec = total > 0 ? Math.round(totalDuration / total) : 0;
+      const avgDurationStr = avgDurationSec >= 60 
+        ? `${Math.floor(avgDurationSec / 60)}m ${avgDurationSec % 60}s` 
+        : `${avgDurationSec}s`;
+
+      const kpiTotal = document.getElementById('kpiTotalCalls');
+      if (kpiTotal) kpiTotal.textContent = total;
+      const kpiBooked = document.getElementById('kpiBookedCalls');
+      if (kpiBooked) kpiBooked.textContent = `${booked} (${total > 0 ? Math.round((booked/total)*100) : 0}%)`;
+      const kpiResched = document.getElementById('kpiRescheduledCalls');
+      if (kpiResched) kpiResched.textContent = rescheduled;
+      const kpiTrans = document.getElementById('kpiTransferredCalls');
+      if (kpiTrans) kpiTrans.textContent = transferred;
+      const kpiAvg = document.getElementById('kpiAvgDuration');
+      if (kpiAvg) kpiAvg.textContent = avgDurationStr;
+    }
+
+    function renderCallLogsTable(logs) {
+      const tbody = document.getElementById('callLogsTableBody');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+
+      if (!logs || logs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="p-8 text-center text-slate-500 italic">No call records found in database. Place a browser or PSTN call to create your first record!</td></tr>';
+        return;
+      }
+
+      logs.forEach((log) => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-900/80 transition cursor-pointer';
+        tr.onclick = () => openCallDetailsModal(log.call_id);
+
+        const dateStrIST = formatToIST(log.created_at, true);
+        const custName = log.customer_name || log.customer_id || 'Valued Customer';
+        const phone = log.customer_phone || '--';
+        const vehModel = log.model_name || 'Mahindra Vehicle';
+        const regNo = log.registration_number || '--';
+        const channel = log.channel === 'TWILIO_PSTN' ? '📞 PSTN Phone' : '🎙️ WebRTC Mic';
+        const channelBadge = log.channel === 'TWILIO_PSTN' 
+          ? 'bg-rose-950 text-rose-300 border-rose-800' 
+          : 'bg-indigo-950 text-indigo-300 border-indigo-800';
+
+        const durSec = log.duration_seconds || 0;
+        const durStr = durSec >= 60 ? `${Math.floor(durSec / 60)}m ${durSec % 60}s` : `${durSec}s`;
+
+        const disp = (log.disposition || 'DECLINED').toUpperCase();
+        let dispBadge = 'bg-rose-950 text-rose-300 border-rose-800';
+        let dispLabel = '🔴 Declined / Not Interested';
+        if (disp === 'BOOKED' || disp === 'CONFIRMED') {
+          dispBadge = 'bg-emerald-950 text-emerald-300 border-emerald-800 font-bold';
+          dispLabel = '🟢 Confirmed Booking';
+        } else if (disp === 'RESCHEDULED') {
+          dispBadge = 'bg-amber-950 text-amber-300 border-amber-800 font-bold';
+          dispLabel = '🟡 Rescheduled Callback';
+        } else if (disp === 'TRANSFERRED') {
+          dispBadge = 'bg-indigo-950 text-indigo-300 border-indigo-800 font-bold';
+          dispLabel = '🔵 Advisor Transfer';
+        } else if (disp === 'ALREADY_SERVICED') {
+          dispBadge = 'bg-sky-950 text-sky-300 border-sky-800';
+          dispLabel = '⚪ Already Serviced';
+        } else {
+          dispBadge = 'bg-rose-950 text-rose-300 border-rose-800';
+          dispLabel = '🔴 Declined / Not Interested';
+        }
+
+        const cbScheduledIST = log.callback_scheduled_at ? formatToIST(log.callback_scheduled_at, true) : '--';
+
+        tr.innerHTML = `
+          <td class="p-3.5 whitespace-nowrap text-slate-400">${dateStrIST}</td>
+          <td class="p-3.5">
+            <div class="font-bold text-white">${custName}</div>
+            <div class="text-[10px] text-slate-500">${phone}</div>
+          </td>
+          <td class="p-3.5">
+            <div class="text-white">${vehModel}</div>
+            <div class="text-[10px] text-rose-400">${regNo}</div>
+          </td>
+          <td class="p-3.5">
+            <span class="text-[10px] px-2 py-0.5 rounded border ${channelBadge}">${channel}</span>
+          </td>
+          <td class="p-3.5 text-slate-300 font-bold">${durStr}</td>
+          <td class="p-3.5">
+            <span class="text-[10px] px-2.5 py-1 rounded border ${dispBadge}">${dispLabel}</span>
+          </td>
+          <td class="p-3.5 text-amber-300 font-semibold">${cbScheduledIST}</td>
+          <td class="p-3.5 text-right">
+            <button onclick="event.stopPropagation(); openCallDetailsModal('${log.call_id}')" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-rose-400 border border-slate-700 text-[11px] font-sans font-medium transition">
+              Inspect &rarr;
+            </button>
+          </td>
+        `;
+
+        tbody.appendChild(tr);
+      });
+    }
+
+    function filterCallLogs() {
+      const q = (document.getElementById('callLogSearchInput')?.value || '').toLowerCase().trim();
+      const dispFilter = document.getElementById('callLogDispositionFilter')?.value || 'ALL';
+
+      const filtered = allCallLogs.filter(log => {
+        const matchText = (
+          (log.call_id || '') + ' ' +
+          (log.customer_name || '') + ' ' +
+          (log.customer_phone || '') + ' ' +
+          (log.model_name || '') + ' ' +
+          (log.registration_number || '') + ' ' +
+          (log.disposition || '')
+        ).toLowerCase();
+
+        const matchesQuery = !q || matchText.includes(q);
+
+        let matchesDisp = true;
+        if (dispFilter !== 'ALL') {
+          const logDisp = (log.disposition || '').toUpperCase();
+          matchesDisp = (logDisp === dispFilter);
+        }
+
+        return matchesQuery && matchesDisp;
+      });
+
+      renderCallLogsTable(filtered);
+    }
+
+    let activeModalLog = null;
+
+    // Consolidates contiguous raw transcript chunks into single-line turns
+    function consolidateTranscripts(rawList) {
+      if (!rawList || !Array.isArray(rawList) || rawList.length === 0) return [];
+      const turns = [];
+      let currentRole = null;
+      let currentText = '';
+      let currentTimestamp = '';
+
+      rawList.forEach(t => {
+        if (!t) return;
+        const rawRole = t.role || 'assistant';
+        const isAi = rawRole === 'agent' || rawRole === 'model' || rawRole === 'assistant';
+        const role = isAi ? 'assistant' : (rawRole === 'system' ? 'system' : 'user');
+        const text = (t.text || '').trim();
+        if (!text) return;
+
+        const rawTs = t.timestamp;
+        const tsString = (rawTs !== undefined && rawTs !== null) ? String(rawTs) : '';
+        const formattedTs = tsString ? (tsString.includes('IST') ? tsString : formatToIST(rawTs, false)) : getNowISTTime();
+
+        if (role === currentRole && role !== 'system') {
+          // Merge into same turn
+          currentText += (currentText.endsWith(' ') ? '' : ' ') + text;
+        } else {
+          if (currentRole && currentText) {
+            turns.push({ role: currentRole, text: currentText.trim(), timestamp: currentTimestamp });
+          }
+          currentRole = role;
+          currentText = text;
+          currentTimestamp = formattedTs;
+        }
+      });
+
+      if (currentRole && currentText) {
+        turns.push({ role: currentRole, text: currentText.trim(), timestamp: currentTimestamp });
+      }
+
+      return turns;
+    }
+
+    function openCallDetailsModal(callId) {
+      const log = allCallLogs.find(l => l.call_id === callId);
+      if (!log) return;
+      activeModalLog = log;
+
+      const custName = log.customer_name || log.customer_id || 'Valued Customer';
+      const phone = log.customer_phone || '--';
+      const model = log.model_name || 'Vehicle';
+      const reg = log.registration_number || '--';
+      const dateStrIST = formatToIST(log.created_at, true);
+      const disp = log.disposition || 'DECLINED';
+      const durSec = log.duration_seconds || 0;
+      const durStr = durSec >= 60 ? `${Math.floor(durSec / 60)}m ${durSec % 60}s` : `${durSec}s`;
+
+      document.getElementById('modalCallCustName').textContent = `${custName} (${phone}) - ${model} [${reg}]`;
+      document.getElementById('modalCallSubtext').textContent = `Call SID: ${log.call_id} | Date: ${dateStrIST} | Duration: ${durStr} | Outcome: ${disp}`;
+
+      // Consolidate into clean single line turns
+      const transcriptBody = document.getElementById('modalTranscriptBody');
+      transcriptBody.innerHTML = '';
+      const consolidatedTurns = consolidateTranscripts(log.transcripts || []);
+      document.getElementById('modalTranscriptCount').textContent = `${consolidatedTurns.length} turns`;
+
+      if (consolidatedTurns.length === 0) {
+        transcriptBody.innerHTML = '<div class="text-center text-slate-500 text-xs py-10 italic">No transcript recorded for this call.</div>';
+      } else {
+        consolidatedTurns.forEach(t => {
+          const isAi = t.role === 'assistant';
+          const roleLabel = isAi ? 'AI Concierge (Pooja)' : (t.role === 'system' ? 'System' : 'Customer');
+          const roleBadgeClass = isAi ? 'bg-rose-950 text-rose-300 border-rose-800' : (t.role === 'system' ? 'bg-slate-800 text-slate-400 border-slate-700' : 'bg-indigo-950 text-indigo-300 border-indigo-800');
+
+          const div = document.createElement('div');
+          div.className = 'flex flex-col gap-1 text-xs';
+          div.innerHTML = `
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded border ${roleBadgeClass}">${roleLabel}</span>
+              <span class="text-[10px] text-slate-500 font-mono">${t.timestamp || ''}</span>
+            </div>
+            <div class="p-3 rounded-xl ${isAi ? 'bg-slate-900 border border-slate-800 text-slate-100' : 'bg-slate-950 border border-slate-800 text-slate-200'} leading-relaxed font-sans">
+              ${t.text || ''}
+            </div>
+          `;
+          transcriptBody.appendChild(div);
+        });
+      }
+
+      // Render Tools
+      const toolBody = document.getElementById('modalToolBody');
+      toolBody.innerHTML = '';
+      const toolCalls = log.tool_calls || [];
+      document.getElementById('modalToolCount').textContent = `${toolCalls.length} tools`;
+
+      if (toolCalls.length === 0) {
+        toolBody.innerHTML = '<div class="text-center text-slate-500 text-xs py-10 italic">No tools were executed during this conversation turn.</div>';
+      } else {
+        toolCalls.forEach(tc => {
+          const toolName = tc.tool_name || 'DMS Tool';
+          const latency = tc.latency_ms ? `${tc.latency_ms}ms` : '<30ms';
+          const args = tc.args || tc.parameters || {};
+          const result = tc.result || {};
+
+          const toolIcons = {
+            'get_customer_vehicle_profile': '📋',
+            'get_service_cost_estimate': '💰',
+            'check_available_slots': '📅',
+            'hold_service_slot': '🔒',
+            'book_service_appointment': '🚗',
+            'reschedule_reminder': '⏰',
+            'record_customer_disposition': '📝',
+            'transfer_to_service_advisor': '📞'
+          };
+          const icon = toolIcons[toolName] || '🔧';
+
+          const card = document.createElement('div');
+          card.className = 'p-3 rounded-xl bg-slate-900/90 border border-slate-800 flex flex-col gap-2 text-xs font-mono';
+          card.innerHTML = `
+            <div class="flex items-center justify-between border-b border-slate-800 pb-1.5">
+              <span class="font-bold text-indigo-400 flex items-center gap-1">${icon} ${toolName}</span>
+              <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800">${latency}</span>
+            </div>
+            <div>
+              <span class="text-slate-500 text-[10px] font-semibold">Args:</span>
+              <pre class="mt-0.5 p-1.5 rounded bg-slate-950 text-amber-300/90 overflow-x-auto text-[10px]">${JSON.stringify(args, null, 2)}</pre>
+            </div>
+            <div>
+              <span class="text-slate-500 text-[10px] font-semibold">Result:</span>
+              <pre class="mt-0.5 p-1.5 rounded bg-slate-950 text-emerald-300/90 overflow-x-auto text-[10px] max-h-32 overflow-y-auto">${JSON.stringify(result, null, 2)}</pre>
+            </div>
+          `;
+          toolBody.appendChild(card);
+        });
+      }
+
+      document.getElementById('callTranscriptModal').classList.remove('hidden');
+    }
+
+    function closeCallDetailsModal() {
+      document.getElementById('callTranscriptModal').classList.add('hidden');
+      activeModalLog = null;
+    }
+
+    function copyModalTranscriptText() {
+      if (!activeModalLog) return;
+      const turns = consolidateTranscripts(activeModalLog.transcripts || []);
+      const lines = turns.map(t => `[${t.timestamp || ''}] ${t.role.toUpperCase()}: ${t.text}`);
+      navigator.clipboard.writeText(lines.join('\n\n')).then(() => {
+        alert('Transcript copied to clipboard!');
+      }).catch(err => {
+        alert('Could not copy transcript: ' + err.message);
+      });
+    }
+  </script>
+</body>
+</html>
